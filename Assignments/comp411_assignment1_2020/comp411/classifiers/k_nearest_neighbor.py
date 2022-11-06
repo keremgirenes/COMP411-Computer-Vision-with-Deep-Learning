@@ -105,8 +105,7 @@ class KNearestNeighbor(object):
             # Do not use np.linalg.norm().                                        #
             #######################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-            
-            pass
+            dists[i, :] = np.sqrt(np.sum((X[i] - self.X_train)**2, axis=1))
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         return dists
 
@@ -134,9 +133,15 @@ class KNearestNeighbor(object):
         #       and two broadcast sums.                                         #
         #########################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-        
-        pass
-        
+
+        # (test-train)^2 = test^2 + train^2 - 2*test*train
+
+        test_sqrd = np.sum(X**2, axis=1).reshape(num_test, 1)
+        train_sqrd = np.sum(self.X_train**2, axis=1).reshape(1, num_train)
+
+        dists_sqrd = test_sqrd + train_sqrd - 2*np.dot(X, np.transpose(self.X_train))
+        dists = np.sqrt(dists_sqrd)
+
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         return dists
 
@@ -167,9 +172,10 @@ class KNearestNeighbor(object):
                 # scipy.spatial.distance.cosine
                 #####################################################################
                 # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-                
-                pass
-                
+
+                dists[i, j] = 1 - (np.dot(X[i], np.transpose(self.X_train[j])) / \
+                                   np.dot(np.sqrt(np.square(X[i])), np.sqrt(np.square(self.X_train[j]))))
+
                 # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         return dists
 
@@ -191,9 +197,10 @@ class KNearestNeighbor(object):
             # Do not use np.linalg.norm(). and scipy.spatial.distance.cosine      #
             #######################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-            
-            pass
-            
+
+            dists[i, :] = 1 - (np.dot(X[i], np.transpose(np.sum(self.X_train))) / \
+                               np.dot(np.sqrt(np.square(X[i])), np.sqrt(np.sum(np.square(self.X_train)))))
+
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         return dists
     
@@ -223,7 +230,8 @@ class KNearestNeighbor(object):
         #########################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         
-        pass
+        dists = 1 - (np.sum(np.dot(X, np.transpose(self.X_train))) / \
+                     np.dot(np.sqrt(np.sum(np.square(X))), np.sqrt(np.sum(np.square(self.X_train)))))
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         return dists
@@ -256,7 +264,8 @@ class KNearestNeighbor(object):
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-            pass
+            knn_idx = np.argsort(dists[i])[:k]
+            closest_y = self.y_train[knn_idx]
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
             #########################################################################
@@ -268,7 +277,7 @@ class KNearestNeighbor(object):
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-            pass
+            y_pred[i] = np.bincount(closest_y).argmax()
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
