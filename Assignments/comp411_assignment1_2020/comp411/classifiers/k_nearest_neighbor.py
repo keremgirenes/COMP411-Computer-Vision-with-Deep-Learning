@@ -173,9 +173,14 @@ class KNearestNeighbor(object):
                 #####################################################################
                 # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-                dists[i, j] = 1 - (np.dot(X[i], np.transpose(self.X_train[j])) / \
-                                   np.dot(np.sqrt(np.square(X[i])), np.sqrt(np.square(self.X_train[j]))))
-
+                #dists[i, j] = 1 - (np.dot(X[i], np.transpose(self.X_train[j])) / \
+                #                   np.dot(np.sqrt(np.square(X[i])), np.sqrt(np.square(self.X_train[j]))))
+                cosine_similarity = (np.dot(X[i], self.X_train[j]) 
+                / (
+                    np.sqrt(np.dot(X[i].T,X[i])) * np.sqrt(np.dot(self.X_train[j].T,self.X_train[j]))))
+                
+                dists[i, j] = 1 - cosine_similarity
+                
                 # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         return dists
 
@@ -189,6 +194,7 @@ class KNearestNeighbor(object):
         num_test = X.shape[0]
         num_train = self.X_train.shape[0]
         dists = np.zeros((num_test, num_train))
+        norm_array_train = np.sqrt(np.sum(np.abs(self.X_train)**2,axis=-1)) # added 
         for i in range(num_test):
             #######################################################################
             # TODO:                                                               #
@@ -198,8 +204,15 @@ class KNearestNeighbor(object):
             #######################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-            dists[i, :] = 1 - (np.dot(X[i], np.transpose(np.sum(self.X_train))) / \
-                               np.dot(np.sqrt(np.square(X[i])), np.sqrt(np.sum(np.square(self.X_train)))))
+            #dists[i, :] = 1 - (np.dot(X[i], np.transpose(np.sum(self.X_train))) / \
+            #                   np.dot(np.sqrt(np.square(X[i])), np.sqrt(np.sum(np.square(self.X_train)))))
+
+            cosine_similarity = (np.matmul(self.X_train, X[i]) 
+            / (
+                norm_array_train * np.sqrt(np.dot(X[i].T,X[i]))) 
+            )
+            
+            dists[i, :] = 1 - cosine_similarity
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         return dists
@@ -230,9 +243,17 @@ class KNearestNeighbor(object):
         #########################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         
-        dists = 1 - (np.sum(np.dot(X, np.transpose(self.X_train))) / \
-                     np.dot(np.sqrt(np.sum(np.square(X))), np.sqrt(np.sum(np.square(self.X_train)))))
+        #dists = 1 - (np.sum(np.dot(X, np.transpose(self.X_train))) / \
+        #             np.dot(np.sqrt(np.sum(np.square(X))), np.sqrt(np.sum(np.square(self.X_train)))))
+    
+        cosine_similarity = (np.matmul(X,self.X_train.T) 
+        / (
+            np.matmul(
+                np.sqrt(np.sum(np.abs(X)**2,axis=-1,keepdims=True)),
+                np.sqrt(np.sum(np.abs(self.X_train)**2,axis=-1,keepdims=True)).T)
+        ))
 
+        dists = 1 - cosine_similarity
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         return dists
 
