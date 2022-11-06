@@ -87,9 +87,19 @@ class FourLayerNet(object):
         # shape (N, C).                                                             #
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-        
-        pass
+        ReLU = lambda x: np.maximum(0, x)
 
+        q1 = np.dot(X, W1) + b1
+        h1 = ReLU(q1)
+         
+        q2 = np.dot(h1, W2) + b2
+        h2 = ReLU(q2)
+
+        q3 = np.dot(h2, W3) + b3
+        h3 = ReLU(q3)
+
+        scores = np.dot(h3, W4) + b4   
+      
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
         # If the targets are not given then jump out, we're done
@@ -100,13 +110,19 @@ class FourLayerNet(object):
         loss = None
         #############################################################################
         # TODO: Finish the forward pass, and compute the loss. This should include  #
-        # both the data loss and L2 regularization for W1, W2, W3 and W4. Store the result  #
-        # in the variable loss, which should be a scalar. Use the Softmax           #
-        # classifier loss.                                                          #
+        # both the data loss and L2 regularization for W1, W2, W3 and W4. Store the #
+        # result in the variable loss, which should be a scalar. Use the Softmax    #       
+        # classifier loss.                                                          # 
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-        
-        pass
+
+        scores -= np.max(scores,axis=1).reshape(N,1) 
+
+        exp_scores = np.exp(scores)
+        softmax_scores = exp_scores / np.sum(exp_scores,axis=1).reshape(N,1)
+        loss_array = - np.log(softmax_scores[np.arange(N),y])
+        loss = np.mean(loss_array)
+        loss += reg * ( np.sum(W1 * W1) + np.sum(W2 * W2) + np.sum(W3 * W3) + np.sum(W4 * W4) ) 
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -118,9 +134,38 @@ class FourLayerNet(object):
         # grads['W1'] should store the gradient on W1, and be a matrix of same size #
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+         
+        dSoftmax = np.copy(softmax_scores) # (N,C)           
+        dSoftmax[np.arange(N),y] -= 1
+        dSoftmax /= N
 
-        pass
-    
+        dW4 = np.matmul(h3.T,dSoftmax) # (H,C)
+        db4 = np.sum(dSoftmax,axis=0) # (C,)
+        
+        dhidden3 = np.matmul(dSoftmax,W4.T) # (N,H)
+        router_matrix3 = h3 == 0 # (N,H)
+        dhidden3[router_matrix3] = 0
+        dW3 = np.matmul(h2.T,dhidden3) # (H,H) 
+        db3 = np.sum(dhidden3,axis=0) # (H,1)
+
+        dhidden2 = np.matmul(dhidden3,W3.T) # (N,H)
+        router_matrix2 = h2 == 0 # (N,H)
+        dhidden2[router_matrix2] = 0
+        dW2 = np.matmul(h1.T,dhidden2) # (H,H) 
+        db2 = np.sum(dhidden2,axis=0) # (H,1)
+
+        dhidden1 = np.matmul(dhidden2,W2.T) 
+        router_matrix1 = h1 == 0
+        dhidden1[router_matrix1] = 0
+        dW1 = np.matmul(X.T,dhidden1) 
+        db1 = np.sum(dhidden1,axis=0) 
+        
+        dW4 += reg * 2 * W4
+        dW3 += reg * 2 * W3
+        dW2 += reg * 2 * W2
+        dW1 += reg * 2 * W1
+        
+        grads = {'W4':dW4, 'b4':db4, 'W3':dW3, 'b3':db3, 'W2':dW2, 'b2':db2, 'W1':dW1, 'b1':db1}
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
         return loss, grads
@@ -164,7 +209,10 @@ class FourLayerNet(object):
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-            pass
+            batch_indices = np.random.choice(num_train, batch_size, replace = True)
+            
+            X_batch = X[batch_indices, :]
+            y_batch = y[batch_indices]
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -179,8 +227,9 @@ class FourLayerNet(object):
             # stored in the grads dictionary defined above.                         #
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+            for par in self.params:
+              self.params[par] = self.params[par] - learning_rate * grads[par] 
             
-            pass
 
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -225,9 +274,10 @@ class FourLayerNet(object):
         # TODO: Implement this function; it should be VERY simple!                #
         ###########################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-        pass
-
+        
+        scores = self.loss(X)
+        y_pred = np.argmax(scores,axis=1)
+        
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
         return y_pred
