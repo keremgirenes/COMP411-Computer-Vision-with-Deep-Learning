@@ -5,3 +5,7 @@
 
 # gitignore the built release.
 assignment3/*
+
+.DS_Store
+.DS_Store?
+._*
