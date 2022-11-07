@@ -19,7 +19,7 @@ class FourLayerNet(object):
     The outputs of the third fully-connected layer are the scores for each class.
     """
 
-    def __init__(self, input_size, hidden_size, output_size, std=1e-3):
+    def __init__(self, input_size, hidden_size, output_size, std=1e-2):
         """
         Initialize the model. Weights are initialized to small random values and
         biases are initialized to zero. Weights and biases are stored in the
@@ -116,12 +116,13 @@ class FourLayerNet(object):
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        #scores -= np.max(scores,axis=1).reshape(N,1) 
+        scores -= np.max(scores,axis=1).reshape(N,1)
+
         exp_scores = np.exp(scores)
         softmax_scores = exp_scores / np.sum(exp_scores,axis=1).reshape(N,1)
         loss_array = - np.log(softmax_scores[np.arange(N),y])
         loss = np.mean(loss_array)
-        loss += reg * ( np.sum(W1 * W1) + np.sum(W2 * W2) + np.sum(W3 * W3) + np.sum(W4 * W4) ) 
+        loss += reg * ( np.sum(W1 * W1) + np.sum(W2 * W2) + np.sum(W3 * W3) + np.sum(W4 * W4) )
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -133,8 +134,8 @@ class FourLayerNet(object):
         # grads['W1'] should store the gradient on W1, and be a matrix of same size #
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-      
-        dSoftmax = np.copy(softmax_scores) # (N,C)           
+
+        dSoftmax = np.copy(softmax_scores) # (N,C)
         dSoftmax[np.arange(N),y] -= 1
         dSoftmax /= N
 
@@ -164,7 +165,6 @@ class FourLayerNet(object):
         dW2 += reg * 2 * W2
         dW1 += reg * 2 * W1
         
-    
         grads = {'W4':dW4, 'b4':db4, 'W3':dW3, 'b3':db3, 'W2':dW2, 'b2':db2, 'W1':dW1, 'b1':db1}
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -210,7 +210,7 @@ class FourLayerNet(object):
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
             batch_indices = np.random.choice(num_train, batch_size)
-            
+
             X_batch = X[batch_indices]
             y_batch = y[batch_indices]
 
@@ -227,10 +227,10 @@ class FourLayerNet(object):
             # stored in the grads dictionary defined above.                         #
             #########################################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-            
+
             for par in grads:
-              self.params[par] -= learning_rate * grads[par] 
-				        
+              self.params[par] -= learning_rate * grads[par]
+
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
             if verbose and it % 100 == 0:
