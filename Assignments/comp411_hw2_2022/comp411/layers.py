@@ -27,9 +27,17 @@ def affine_forward(x, w, b):
     # will need to reshape the input into rows.                               #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-    
-    pass
+    N = x.shape[0]
+    dims = x.shape[1:]
+    D = 1
 
+    for d in dims:
+      D *= d
+  
+    x_flat = np.reshape(x,(N,D))
+
+    out = np.matmul(x_flat,w) + b
+    
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -60,9 +68,20 @@ def affine_backward(dout, cache):
     ###########################################################################
     # TODO: Implement the affine backward pass.                               #
     ###########################################################################
-    # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****    
+    # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    N = x.shape[0]
+    dims = x.shape[1:]
+    D = 1
+    M = w.shape[1]
+
+    for d in dims:
+      D *= d   
+
+    x_flat = np.reshape(x,(N,D))
     
-    pass
+    dx = np.matmul(dout,w.T).reshape(x.shape)
+    dw =  np.matmul(x_flat.T,dout)
+    db = np.matmul(np.ones((1,N)),dout)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -87,7 +106,7 @@ def sigmoid_forward(x):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    out = 1 / (1 + np.exp(-x))
     
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -112,8 +131,10 @@ def sigmoid_backward(dout, cache):
     # TODO: Implement the Sigmoid backward pass.                              #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-    
-    pass
+    sigmoid = lambda x: 1 / (1 + np.exp(-x))
+
+    dx = sigmoid(x) * (1 - sigmoid(x)) * dout
+
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -139,7 +160,7 @@ def relu_forward(x):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    out = np.maximum(0,x)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -166,7 +187,8 @@ def relu_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     
-    pass
+    cut_off = x > 0
+    dx = cut_off * dout
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -197,7 +219,7 @@ def leaky_relu_forward(x, lrelu_param):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    out = np.maximum(alpha * x,x)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -227,8 +249,10 @@ def leaky_relu_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
-
+    leaky_cut_off = np.ones_like(x)
+    leaky_cut_off[(x <= x * alpha)] = alpha 
+    dx = leaky_cut_off * dout
+    
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
