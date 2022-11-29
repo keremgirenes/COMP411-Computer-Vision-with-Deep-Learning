@@ -35,7 +35,6 @@ def affine_forward(x, w, b):
       D *= d
   
     x_flat = np.reshape(x,(N,D))
-
     out = np.matmul(x_flat,w) + b
     
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
