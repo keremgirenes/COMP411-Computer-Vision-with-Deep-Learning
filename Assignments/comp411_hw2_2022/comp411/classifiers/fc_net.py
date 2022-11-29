@@ -267,18 +267,22 @@ class FullyConnectedNet(object):
         lrelu_param['alpha'] = self.alpha
 
         caches = {}
+        dropout_caches = {}
 
         layer_input , layer_output = X, None
 
         # hidden layers
         for layer in range(1, self.num_layers):
           layer_output, caches[str(layer)] = affine_lrelu_forward(layer_input, self.params["W"+str(layer)], self.params["b"+str(layer)], lrelu_param)
-     
+
+          if self.use_dropout:
+            layer_output, dropout_caches[str(layer)] = dropout_forward(layer_output,self.dropout_param)
+
           layer_input = layer_output
         
         # output layer
-        scores, caches[str(self.num_layers)] = affine_forward(layer_input, self.params["W"+str(self.num_layers)], self.params["b"+str(self.num_layers)])
- 
+        scores, caches[str(self.num_layers)] = affine_forward(layer_input, self.params["W"+str(self.num_layers)], self.params["b"+str(self.num_layers)])        
+
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
         #                             END OF YOUR CODE                             #
@@ -310,8 +314,8 @@ class FullyConnectedNet(object):
         str_layer = str(self.num_layers)
         str_w = "W" + str_layer
         str_b = "b" + str_layer
-        # output layer
         
+        # output layer
         dout, grads[str_w],grads[str_b] = affine_backward(dout, caches[str_layer])
         grads[str_w] += self.reg * self.params[str_w] 
 
@@ -320,6 +324,9 @@ class FullyConnectedNet(object):
           str_layer = str(layer)
           str_w = "W" + str_layer
           str_b = "b" + str_layer
+
+          if self.use_dropout:
+            dout = dropout_backward(dout,dropout_caches[str_layer])
 
           dout, grads[str_w],grads[str_b] = affine_lrelu_backward(dout, caches[str_layer])
           grads[str_w] += self.reg * self.params[str_w] 
