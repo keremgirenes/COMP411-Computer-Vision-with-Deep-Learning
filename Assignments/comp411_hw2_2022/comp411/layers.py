@@ -28,7 +28,8 @@ def affine_forward(x, w, b):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     
-    pass
+    x_reshape = x.reshape(x.shape[0], np.prod(x[0].shape))
+    out = np.dot(x_reshape, w) + b.reshape(1, -1)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -62,7 +63,13 @@ def affine_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****    
     
-    pass
+    x_reshape = x.reshape(x.shape[0], np.prod(x[0].shape))
+
+    dx = np.dot(dout, np.transpose(w)).reshape(x.shape)
+
+    dw = np.dot(np.transpose(x_reshape), dout)
+
+    db = np.sum(dout, axis=0)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -87,7 +94,7 @@ def sigmoid_forward(x):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    out = 1 / (1 +  np.exp(-out))
     
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -113,7 +120,7 @@ def sigmoid_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     
-    pass
+    dx = (1 / (1 +  np.exp(-x))) * (1 - (1 / (1 +  np.exp(-x))))
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -139,7 +146,7 @@ def relu_forward(x):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    out = np.maximum(0, x)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -165,8 +172,10 @@ def relu_backward(dout, cache):
     # TODO: Implement the ReLU backward pass.                                 #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-    
-    pass
+
+    dL = np.ones(x.shape)
+    dL[x < 0] = 0
+    dx = dout * dL
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -196,8 +205,10 @@ def leaky_relu_forward(x, lrelu_param):
     # TODO: Implement the Leaky ReLU forward pass.                            #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    
+    alpha = lrelu_param['alpha']
 
-    pass
+    out = np.maximum(x, alpha*x)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -227,7 +238,9 @@ def leaky_relu_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    dL = np.ones(x.shape)
+    dL[x < 0] = alpha
+    dx = dout * dL
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -368,7 +381,40 @@ def conv_forward_naive(x, w, b, conv_param):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N = x.shape[0]
+    C = x.shape[1]
+
+    pad = conv_param.get('pad')
+
+    height = x.shape[2] + pad*2
+    width = x.shape[3] + pad*2
+
+    n_filter = w.shape[0]
+    filter_h = w.shape[2]
+    filter_w = w.shape[3]
+
+    stride = conv_param.get('stride')
+
+    n_stride_w = (width - filter_w) // stride + 1
+    n_stride_h = (height - filter_h) // stride + 1
+
+    activation_map = np.zeros((N, n_filter, n_stride_w, n_stride_h))
+
+    for sample in range(N):
+      for filter in range(n_filter):
+        sample_filtered = np.zeros((n_stride_w, n_stride_h))
+        for j in range(n_stride_h):
+          for i in range(n_stride_w):
+            conv_output = 0
+            for channel in range(C):
+              channel_padded = np.pad(x[sample, channel], ((pad,pad), (pad,pad)), 'constant', constant_values=0)
+              conv_output += np.sum(channel_padded[
+                i * stride: i * stride + filter_w,
+                j * stride: j * stride + filter_h] * w[filter, channel])
+            sample_filtered[i, j] = conv_output + b[filter]
+        activation_map[sample, filter] = sample_filtered
+
+    out = activation_map
             
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
@@ -399,7 +445,50 @@ def conv_backward_naive(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    x = cache[0]
+    w = cache[1]
+    b = cache[2]
+    conv_param = cache[3]
+
+    N = x.shape[0]
+    C = x.shape[1]
+
+    pad = conv_param.get('pad')
+    
+    height = x.shape[2] + pad*2
+    width = x.shape[3] + pad*2
+
+    n_filter = w.shape[0]
+    filter_h = w.shape[2]
+    filter_w = w.shape[3]
+
+    stride = conv_param.get('stride')
+
+    n_stride_h = (height - filter_h) // stride + 1
+    n_stride_w = (width - filter_w) // stride + 1
+
+    dx = np.zeros(x.shape)
+    dw = np.zeros(w.shape)
+    db = np.zeros(b.shape)
+
+    dx_padded = np.zeros(x.shape)
+    dx_padded = np.pad(dx_padded, ((0,0), (0,0), (pad,pad), (pad,pad)), 'constant', constant_values=0)
+
+    for sample in range(N):
+      for filter in range(n_filter):
+        db[filter] += dout[sample][filter].sum()
+        for i in range(n_stride_h):
+          for j in range(n_stride_w):
+            dx_padded[sample, :,
+                      i * stride: i * stride + filter_h,
+                      j * stride: j * stride + filter_w] += w[filter] * dout[sample, filter, i, j]
+            for channel in range(C):
+              channel_padded = np.pad(x[sample, channel], ((pad,pad), (pad,pad)), 'constant', constant_values=0)
+              dw[filter, channel] += channel_padded[
+                i * stride: i * stride + filter_h,
+                j * stride: j * stride + filter_w] * dout[sample, filter, i, j]
+            
+    dx = dx_padded[:, :, pad: height-pad, pad: width-pad]
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -433,7 +522,24 @@ def max_pool_forward_naive(x, pool_param):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N = x.shape[0]
+    C = x.shape[1]
+    height = x.shape[2]
+    width = x.shape[3]
+
+    pool_height = pool_param['pool_height']
+    pool_width = pool_param['pool_width']
+    stride = pool_param['stride']
+
+    output_height = ((height-pool_height)//stride) + 1
+    output_width = ((width-pool_width)//stride) + 1
+
+    out = np.zeros((N, C, output_height, output_width))
+
+    for sample in range(N):
+      for i in range(output_height):
+        for j in range(output_width):
+          out[sample, :, i, j] = np.max(x[sample, :, i * stride: i * stride + pool_height, j * stride: j * stride + pool_width], axis=(-2, -1))
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -459,8 +565,32 @@ def max_pool_backward_naive(dout, cache):
     # TODO: Implement the max-pooling backward pass                           #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    
+    x = cache[0]
+    pool_param = cache[1]
 
-    pass
+    N = x.shape[0]
+    C = x.shape[1]
+    height = x.shape[2]
+    width = x.shape[3]
+
+    stride = pool_param['stride']
+    pool_height = pool_param['pool_height']
+    pool_width = pool_param['pool_width']
+
+    output_height = ((height-pool_height)//stride) + 1
+    output_width = ((width-pool_width)//stride) + 1
+
+    dx = np.zeros(x.shape)
+
+    for sample in range(N):
+      for channel in range(C):
+        for i in range(output_height):
+          for j in range(output_width):
+            max_in_pool_idx = np.argmax(x[sample, channel, i * stride: i * stride + pool_height, j * stride: j * stride + pool_width])
+            row = max_in_pool_idx // pool_width
+            col = max_in_pool_idx % pool_width
+            dx[sample, channel, i * stride: i * stride + pool_height, j * stride: j * stride + pool_width][row, col] = dout[sample, channel, i, j]
                     
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
@@ -495,8 +625,24 @@ def avg_pool_forward_naive(x, pool_param):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N = x.shape[0]
+    C = x.shape[1]
+    height = x.shape[2]
+    width = x.shape[3]
 
+    pool_height = pool_param['pool_height']
+    pool_width = pool_param['pool_width']
+    stride = pool_param['stride']
+
+    output_height = ((height-pool_height)//stride) + 1
+    output_width = ((width-pool_width)//stride) + 1
+
+    out = np.zeros((N, C, output_height, output_width))
+
+    for sample in range(N):
+      for i in range(output_height):
+        for j in range(output_width):
+          out[sample, :, i, j] = np.sum(x[sample, :, i * stride: i * stride + pool_height, j * stride: j * stride + pool_width], axis=(-2, -1)) / (pool_height*pool_width)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -522,7 +668,28 @@ def avg_pool_backward_naive(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    x = cache[0]
+    pool_param = cache[1]
+
+    N = x.shape[0]
+    C = x.shape[1]
+    height = x.shape[2]
+    width = x.shape[3]
+
+    stride = pool_param['stride']
+    pool_height = pool_param['pool_height']
+    pool_width = pool_param['pool_width']
+
+    output_height = ((height-pool_height)//stride) + 1
+    output_width = ((width-pool_width)//stride) + 1
+
+    dx = np.zeros(x.shape)
+
+    for sample in range(N):
+      for channel in range(C):
+        for i in range(output_height):
+          for j in range(output_width):
+            dx[sample, channel, i * stride: i * stride + pool_height, j * stride: j * stride + pool_width] = dout[sample, channel, i, j] / (pool_height*pool_width)
                     
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
