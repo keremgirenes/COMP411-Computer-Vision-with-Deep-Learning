@@ -66,8 +66,11 @@ def sgd_momentum(w, dw, config=None):
     # the next_w variable. You should also use and update the velocity v.     #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    mu = config['momentum']
+    lr = config['learning_rate']
     
-    pass
+    v = mu * v - lr * dw 
+    next_w = w + v 
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -99,8 +102,12 @@ def sgd_nesterov_momentum(w, dw, config=None):
     # the next_w variable. You should also use and update the velocity v.     #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    mu = config['momentum']
+    lr = config['learning_rate']
 
-    pass
+    v_prev = v 
+    v = mu * v - lr * dw 
+    next_w = w - mu * v_prev + (1 + mu) * v 
     
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -176,31 +183,16 @@ def adam(w, dw, config=None):
     # using it in any calculations.                                           #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    epsilon = config['epsilon']
-    lrate = config['learning_rate']
-
-    beta1 = config['beta1']
-    beta2 = config['beta2']
-
-    m = config['m'] 
-    v = config['v']
-    t = config['t']
-
-    m = m * beta1 + dw * (1 - beta1)
-    v = v * beta2 + (dw**2) * (1 - beta2)
-
-    config['m'] = m
-    config['v'] = v
-
+    first_moment, second_moment, t = config['m'], config['v'], config['t']
     t += 1
-    mt = m / (1 - beta1**t)
-    vt = v / (1 - beta2**t)
 
-    config['t'] = t
-
-    next_w = w - (lrate * mt / (np.sqrt(vt) + epsilon))
+    first_moment = config['beta1'] * first_moment + (1 - config['beta1']) * dw
+    second_moment = config['beta2'] * second_moment + (1 - config['beta2']) * dw * dw
+    first_bias = first_moment / (1 - config['beta1'] ** t)
+    second_bias = second_moment / (1 - config['beta2'] ** t)
+    next_w = w - config['learning_rate'] * first_bias / (np.sqrt(second_bias) + config['epsilon'])
     
+    config['m'], config['v'], config['t'] = first_moment, second_moment, t 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #

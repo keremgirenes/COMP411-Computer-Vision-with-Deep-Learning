@@ -27,6 +27,15 @@ def affine_forward(x, w, b):
     # will need to reshape the input into rows.                               #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    N = x.shape[0]
+    dims = x.shape[1:]
+    D = 1
+
+    for d in dims:
+      D *= d
+  
+    x_flat = np.reshape(x,(N,D))
+    out = np.matmul(x_flat,w) + b
     
     x_reshape = x.reshape(x.shape[0], np.prod(x[0].shape))
     out = np.dot(x_reshape, w) + b.reshape(1, -1)
@@ -61,15 +70,20 @@ def affine_backward(dout, cache):
     ###########################################################################
     # TODO: Implement the affine backward pass.                               #
     ###########################################################################
-    # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****    
+    # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    N = x.shape[0]
+    dims = x.shape[1:]
+    D = 1
+    M = w.shape[1]
+
+    for d in dims:
+      D *= d   
+
+    x_flat = np.reshape(x,(N,D))
     
-    x_reshape = x.reshape(x.shape[0], np.prod(x[0].shape))
-
-    dx = np.dot(dout, np.transpose(w)).reshape(x.shape)
-
-    dw = np.dot(np.transpose(x_reshape), dout)
-
-    db = np.sum(dout, axis=0)
+    dx = np.matmul(dout,w.T).reshape(x.shape)
+    dw =  np.matmul(x_flat.T,dout)
+    db = np.matmul(np.ones((1,N)),dout)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -94,7 +108,7 @@ def sigmoid_forward(x):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    out = 1 / (1 +  np.exp(-out))
+    out = 1 / (1 + np.exp(-x))
     
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -119,8 +133,10 @@ def sigmoid_backward(dout, cache):
     # TODO: Implement the Sigmoid backward pass.                              #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-    
-    dx = (1 / (1 +  np.exp(-x))) * (1 - (1 / (1 +  np.exp(-x))))
+    sigmoid = lambda x: 1 / (1 + np.exp(-x))
+
+    dx = sigmoid(x) * (1 - sigmoid(x)) * dout
+
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -146,7 +162,7 @@ def relu_forward(x):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    out = np.maximum(0, x)
+    out = np.maximum(0,x)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -172,10 +188,9 @@ def relu_backward(dout, cache):
     # TODO: Implement the ReLU backward pass.                                 #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    dL = np.ones(x.shape)
-    dL[x < 0] = 0
-    dx = dout * dL
+    
+    cut_off = x > 0
+    dx = cut_off * dout
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -205,10 +220,8 @@ def leaky_relu_forward(x, lrelu_param):
     # TODO: Implement the Leaky ReLU forward pass.                            #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-    
-    alpha = lrelu_param['alpha']
 
-    out = np.maximum(x, alpha*x)
+    out = np.maximum(alpha * x,x)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -238,10 +251,10 @@ def leaky_relu_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    dL = np.ones(x.shape)
-    dL[x < 0] = alpha
-    dx = dout * dL
-
+    leaky_cut_off = np.ones_like(x)
+    leaky_cut_off[(x <= x * alpha)] = alpha 
+    dx = leaky_cut_off * dout
+    
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -289,7 +302,8 @@ def dropout_forward(x, dropout_param):
         #######################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         
-        pass
+        mask = (np.random.rand(*x.shape) < p ) / p
+        out = x * mask
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         #######################################################################
@@ -301,7 +315,7 @@ def dropout_forward(x, dropout_param):
         #######################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        out = x
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         #######################################################################
@@ -332,7 +346,7 @@ def dropout_backward(dout, cache):
         #######################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         
-        pass
+        dx = dout * mask
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         #######################################################################
