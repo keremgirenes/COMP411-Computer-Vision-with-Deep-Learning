@@ -150,8 +150,26 @@ class CaptioningRNN(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
-        
+        ## FORWARD
+        # 1 
+        h0, cache_affine = affine_forward(features, W_proj, b_proj)
+        # 2
+        embedded_captions, cache_embedded = word_embedding_forward(captions_in, W_embed)
+        # 3
+        h, cache_rnn = rnn_forward(embedded_captions, h0, Wx, Wh, b)
+        # 4
+        y, cache_temporal_affine = temporal_affine_forward(h, W_vocab, b_vocab)
+        # 5
+        loss, dout = temporal_softmax_loss(y, captions_out, mask)
+
+        ## GRAD
+        dout, grads['W_vocab'], grads['b_vocab'] = temporal_affine_backward(dout, cache_temporal_affine)
+        dout, dh0, grads['Wx'], grads['Wh'], grads['b'] = rnn_backward(dout, cache_rnn)
+        grads['W_embed'] = word_embedding_backward(dout, cache_embedded)
+        dout, grads['W_proj'], grads['b_proj'] = affine_backward(dh0, cache_affine)
+
+        if self.gclip > 0:
+          grads = self.clip_grad_norm(grads, self.gclip)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -175,9 +193,13 @@ class CaptioningRNN(object):
         # TODO: Implement gradient clipping using gclip value as the threshold.   #
         ###########################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-       
-        pass
-                
+        
+        clipped_grads = {}
+        for key in grads:
+          max_grad = np.max(grads[key])
+          norm_div = max_grad / gclip
+          clipped_grads[key] = grads[key] / norm_div
+            
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -240,7 +262,17 @@ class CaptioningRNN(object):
         ###########################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        h, cache_affine = affine_forward(features, W_proj, b_proj)
+
+        word_prev = np.repeat(self._start, N)
+
+        for i in range(max_length):
+          embedded_word, cache_embedded = word_embedding_forward(word_prev, W_embed)
+          h, cache_step_forward = rnn_step_forward(embedded_word, h, Wx, Wh, b)
+          y, cache_affine = affine_forward(h, W_vocab, b_vocab)
+          word_prev = np.argmax(y, axis=1)
+          captions[:, i] = word_prev
+
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -301,7 +333,20 @@ class CaptioningRNN(object):
         ###########################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        h, cache_affine = affine_forward(features, W_proj, b_proj)
+
+        word_prev = np.repeat(self._start, N)
+
+        for i in range(max_length):
+          embedded_word, cache_embedded = word_embedding_forward(word_prev, W_embed)
+          h, cache_step_forward = rnn_step_forward(embedded_word, h, Wx, Wh, b)
+          y, cache_affine = affine_forward(h, W_vocab, b_vocab)
+          
+          y = y[0]
+          y_soft = (np.exp(y - np.max(y)) / np.sum(np.exp(y - np.max(y))))
+          word_prev = np.random.choice(list(range(len(y_soft))), 1, p=y_soft)
+
+          captions[:, i] = word_prev
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
