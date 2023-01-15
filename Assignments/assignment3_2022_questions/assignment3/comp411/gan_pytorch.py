@@ -30,7 +30,7 @@ def sample_noise(batch_size, dim, seed=None):
 
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    return torch.rand(batch_size, dim) * 2 - 1
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -51,7 +51,14 @@ def discriminator(seed=None):
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    model = nn.Sequential(
+          Flatten(),
+          nn.Linear(784, 256),
+          nn.LeakyReLU(0.01),
+          nn.Linear(256, 256),
+          nn.LeakyReLU(0.01),
+          nn.Linear(256, 1),
+        )
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
@@ -76,7 +83,14 @@ def generator(noise_dim=NOISE_DIM, seed=None):
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    model = nn.Sequential(
+          nn.Linear(noise_dim, 1024),
+          nn.ReLU(),
+          nn.Linear(1024, 1024),
+          nn.ReLU(),
+          nn.Linear(1024,784),
+          nn.Tanh(),
+        )
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
@@ -111,8 +125,8 @@ def discriminator_loss(logits_real, logits_fake):
     """
     loss = None
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
+    
+    loss = bce_loss(logits_real,torch.ones(logits_real.shape[0]).type(dtype)) + bce_loss(logits_fake,torch.zeros(logits_fake.shape[0]).type(dtype))
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     return loss
@@ -130,7 +144,7 @@ def generator_loss(logits_fake):
     loss = None
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    loss = bce_loss(logits_fake,torch.ones(logits_fake.shape[0]).type(dtype))
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     return loss
@@ -149,7 +163,7 @@ def get_optimizer(model):
     optimizer = None
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    optimizer = torch.optim.Adam(model.parameters(),betas=(0.5, 0.999))
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     return optimizer
@@ -168,7 +182,7 @@ def ls_discriminator_loss(scores_real, scores_fake):
     loss = None
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    loss = 0.5 * torch.mean((scores_real - 1) ** 2) + 0.5 * torch.mean((scores_fake) ** 2)  
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     return loss
@@ -186,7 +200,7 @@ def ls_generator_loss(scores_fake):
     loss = None
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    loss = 0.5 * torch.mean((scores_fake - 1) ** 2)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     return loss
@@ -196,7 +210,7 @@ def build_dc_classifier(batch_size):
     Build and return a PyTorch model for the DCGAN discriminator implementing
     the architecture above.
     """
-
+    model = None
     ##############################################################################
     # TODO: Implement architecture                                               #
     #                                                                            #
@@ -204,12 +218,25 @@ def build_dc_classifier(batch_size):
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    model = nn.Sequential(
+            nn.Conv2d(1, 32, 5),
+            nn.LeakyReLU(0.01),
+            nn.MaxPool2d(2, stride=2),
+            nn.Conv2d(32, 64, 5),
+            nn.LeakyReLU(0.01),
+            nn.MaxPool2d(2, stride=2),
+            Flatten(),
+            nn.Linear(1024,1024),
+            nn.LeakyReLU(0.01),
+            nn.Linear(1024,1),
+        )
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
     #                               END OF YOUR CODE                             #
     ##############################################################################
+    
+    return model
 
 
 def build_dc_generator(noise_dim=NOISE_DIM):
@@ -217,7 +244,7 @@ def build_dc_generator(noise_dim=NOISE_DIM):
     Build and return a PyTorch model implementing the DCGAN generator using
     the architecture described above.
     """
-
+    model = None
     ##############################################################################
     # TODO: Implement architecture                                               #
     #                                                                            #
@@ -225,12 +252,28 @@ def build_dc_generator(noise_dim=NOISE_DIM):
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    model = nn.Sequential(
+            nn.Linear(noise_dim,1024),
+            nn.ReLU(),
+            nn.BatchNorm1d(1024),
+            nn.Linear(1024,7*7*128),
+            nn.ReLU(),
+            nn.BatchNorm1d(7*7*128),
+            Unflatten(),
+            nn.ConvTranspose2d(128,64,4,stride=2,padding=1),
+            nn.ReLU(),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            nn.ConvTranspose2d(64,1,4,stride=2,padding=1),
+            nn.Tanh(),
+            Flatten(),
+        )
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
     #                               END OF YOUR CODE                             #
     ##############################################################################
+    return model
 
 def run_a_gan(D, G, D_solver, G_solver, discriminator_loss, generator_loss, loader_train, show_every=250,
               batch_size=128, noise_size=96, num_epochs=10):
